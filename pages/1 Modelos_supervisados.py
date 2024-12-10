@@ -128,7 +128,7 @@ Este código realiza un análisis de modelos de clasificación utilizando difere
 Autor: Javier Horacio Pérez Ricárdez
 """)
 
-st.title('Model Analysis for All Combinations')
+st.title('Análisis de modelos para todas las combinaciones')
 
 # Load data (modify as needed)
 input_df = pd.read_csv("iris.csv")
