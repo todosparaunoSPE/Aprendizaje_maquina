@@ -33,8 +33,8 @@ st.title("Modelos Supervisados y No Supervisados")
 
 #Para cada modelo, se explorarán combinaciones de atributos para analizar los resultados.
 
-**Autor**: Javier Horacio Pérez Ricárdez
+Autor: Javier Horacio Pérez Ricárdez
 """)
 
 # Mostrar el conjunto de datos
-st.write("### Iris Dataset", input_df)
+#st.write("### Iris Dataset", input_df)
