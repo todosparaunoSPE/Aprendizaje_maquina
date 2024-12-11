@@ -8,6 +8,22 @@ Created on Tue Dec 10 17:36:52 2024
 import pandas as pd
 import streamlit as st
 
+# Estilo de fondo
+page_bg_img = """
+<style>
+[data-testid="stAppViewContainer"]{
+background:
+radial-gradient(black 15%, transparent 16%) 0 0,
+radial-gradient(black 15%, transparent 16%) 8px 8px,
+radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
+radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+background-color:#282828;
+background-size:16px 16px;
+</style>
+"""
+
+st.markdown(page_bg_img, unsafe_allow_html=True)
+
 # Cargar el conjunto de datos (en este caso, Iris)
 #input_df = pd.read_csv("iris.csv")
 
