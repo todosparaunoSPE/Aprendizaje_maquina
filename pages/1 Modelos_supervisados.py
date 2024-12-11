@@ -88,6 +88,19 @@ class ModelAnalysis:
     def save_results_to_csv(self, results_df):
         results_df.to_csv("all_combinations_results.csv", index=False)
 
+    def best_models_by_num_attributes(self, results_df):
+        best_models = {}
+
+        # Filtrar por número de atributos (1, 2, 3, 4)
+        for num_attributes in [1, 2, 3, 4]:
+            subset = results_df[results_df['Combination'].apply(lambda x: len(x) == num_attributes)]
+            best_model_row = subset.loc[subset['Score'].idxmax()]  # Obtener el mejor modelo basado en la puntuación
+            best_models[num_attributes] = best_model_row
+
+        best_models_df = pd.DataFrame.from_dict(best_models, orient='index')
+        return best_models_df
+
+
 def highlight_best_models(df):
     def calculate_score(row):
         metrics = [row['Accuracy'], row['Precision'], row['Recall'], row['F1-Score']]
@@ -95,25 +108,7 @@ def highlight_best_models(df):
 
     df['Score'] = df.apply(calculate_score, axis=1)
 
-    def highlight(row):
-        num_classes = len(row['Combination'])
-        color_map = {
-            1: 'background-color: yellow',
-            2: 'background-color: red',
-            3: 'background-color: green',
-            4: 'background-color: blue'
-        }
-
-        score = row['Score']
-        best_score = df['Score'].max()
-
-        if score == best_score:
-            return [color_map.get(num_classes, '')] * len(row)  # Apply color to all columns of the best row
-        return [''] * len(row)
-
-    styled_df = df.style.apply(highlight, axis=1)
-
-    return styled_df
+    return df
 
 # Streamlit code for visualization
 st.sidebar.title("Ayuda")
@@ -139,8 +134,14 @@ target_column = 'Class'
 analysis = ModelAnalysis(input_df=input_df, target_column=target_column, seed=1271673)
 results_df = analysis.run_all_combinations()
 
-# Highlight the best models and apply colors
-styled_df = highlight_best_models(results_df)
+# Highlight the best models and apply colors (now without styling)
+results_df = highlight_best_models(results_df)
 
-# Display the results with Streamlit
-st.write("### Model Performance Results", styled_df)
+# Display the results without colors
+st.write("### Resultados de rendimiento del modelo", results_df)
+
+# Get the best models for 1, 2, 3, and 4 attributes
+best_models_df = analysis.best_models_by_num_attributes(results_df)
+
+# Display the best models by attributes
+st.write("### Mejores modelos por número de atributos", best_models_df)
