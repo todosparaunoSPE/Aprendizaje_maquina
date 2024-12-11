@@ -18,6 +18,24 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 from itertools import combinations
 import time
 
+
+# Estilo de fondo
+page_bg_img = """
+<style>
+[data-testid="stAppViewContainer"]{
+background:
+radial-gradient(black 15%, transparent 16%) 0 0,
+radial-gradient(black 15%, transparent 16%) 8px 8px,
+radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
+radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+background-color:#282828;
+background-size:16px 16px;
+</style>
+"""
+
+
+
+
 class ModelAnalysis:
     def __init__(self, input_df, model_type=None, target_column='Class', seed=None):
         self.input_df = input_df
