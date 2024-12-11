@@ -9,65 +9,72 @@ Created on Tue Dec 10 16:28:06 2024
 import pandas as pd
 import numpy as np
 import streamlit as st
-from sklearn.cluster import KMeans, MeanShift, AgglomerativeClustering
-from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans, MeanShift, DBSCAN, AgglomerativeClustering, Birch
+from sklearn.metrics import silhouette_score, adjusted_rand_score
 from itertools import combinations
 import time
 
-class ModelAnalysis:
-    def __init__(self, input_df, target_column=None, seed=None):
+class UnsupervisedModelAnalysis:
+    def __init__(self, input_df, model_type=None, seed=None):
+        # Limpia los nombres de las columnas
+        input_df.columns = input_df.columns.str.strip()
+        
         self.input_df = input_df
-        self.target_column = target_column
-        # Asegúrate de eliminar la columna de etiquetas ('Class') si está presente
-        if target_column:
-            self.X = self.input_df.drop(columns=[self.target_column])  # Solo características
-        else:
-            self.X = self.input_df  # Sin cambiar si no hay target_column
+        self.X = self.input_df.drop(columns=['Class'])  # Asegúrate de que la columna 'Class' esté presente
         self.feature_names = self.X.columns  # Nombres de las características
         self.seed = seed
 
+        # Modelos de clustering
         self.models = {
             'KMeans': KMeans(),
             'MeanShift': MeanShift(),
-            'HierarchicalClustering': AgglomerativeClustering()
+            'DBSCAN': DBSCAN(),
+            'Hierarchical': AgglomerativeClustering(),
+            'BIRCH': Birch(threshold=0.1)  # Ajustamos el threshold para BIRCH
         }
+
+        self.model_type = model_type if model_type else 'KMeans'
 
     def run_all_combinations(self, train_test_split_ratio=0.7):
         results = []
 
-        # Evaluar todas las combinaciones posibles de características
         for n in range(1, len(self.feature_names) + 1):
             for comb in combinations(self.feature_names, n):
                 for model_name, model in self.models.items():
                     start_time = time.time()
-                    X_comb = self.X[list(comb)]
+                    X_comb = self.X[list(comb)]  # Selecciona las columnas de la combinación
 
-                    # Ajustar y predecir el modelo
+                    # Ajuste y predicción
                     model.fit(X_comb)
-                    if hasattr(model, 'labels_'):  # Solo para modelos que generan etiquetas
-                        labels = model.labels_
-                    else:
-                        labels = np.nan  # En caso de que no genere etiquetas
+                    labels = model.labels_ if hasattr(model, 'labels_') else None  # Etiquetas generadas por el modelo
 
-                    # Métricas de evaluación
-                    if len(set(labels)) > 1:  # Si hay más de un cluster
-                        silhouette_avg = silhouette_score(X_comb, labels)
+                    # Evaluación de la calidad del clustering, evitando métricas vacías
+                    if labels is not None:
+                        # Si el modelo genera un solo clúster o solo ruido (DBSCAN), los scores no serán válidos
+                        if len(set(labels)) > 1:  # Al menos dos clústeres
+                            sil_score = silhouette_score(X_comb, labels)
+                            ari_score = adjusted_rand_score(self.input_df['Class'], labels)  # Usando 'Class' como referencia
+                        else:
+                            sil_score = np.nan
+                            ari_score = np.nan
                     else:
-                        silhouette_avg = np.nan
+                        sil_score = np.nan
+                        ari_score = np.nan
 
                     elapsed_time = time.time() - start_time
 
                     results.append({
                         'Model': model_name,
                         'Combination': comb,
-                        'Silhouette Score': silhouette_avg,
+                        'Silhouette Score': sil_score,
+                        'Adjusted Rand Index (ARI)': ari_score,
                         'Time': elapsed_time,
-                        'Labels': labels.tolist()  # Guardamos las etiquetas generadas
+                        'Num Attributes': len(comb)
                     })
 
         results_df = pd.DataFrame(results)
 
-        # Guardar resultados en un archivo CSV
+        # Guardar resultados
         self.save_results_to_csv(results_df)
 
         return results_df
@@ -75,49 +82,54 @@ class ModelAnalysis:
     def save_results_to_csv(self, results_df):
         results_df.to_csv("unsupervised_combinations_results.csv", index=False)
 
-def highlight_best_models(df):
-    def calculate_score(row):
-        return row['Silhouette Score'] if not np.isnan(row['Silhouette Score']) else -1
+    def select_best_model_per_combination(self, results_df):
+        # Seleccionar el mejor modelo para cada número de atributos (1, 2, 3, 4)
+        best_models = []
 
-    df['Score'] = df.apply(calculate_score, axis=1)
+        for num_attributes in range(1, 5):  # De 1 a 4 atributos
+            # Filtramos las combinaciones con el número específico de atributos
+            df_subset = results_df[results_df['Num Attributes'] == num_attributes]
 
-    def highlight(row):
-        score = row['Score']
-        best_score = df['Score'].max()
+            # Calculamos el score combinando Silhouette y ARI, y ordenamos por el tiempo
+            df_subset['Score'] = df_subset.apply(lambda row: np.nanmean([row['Silhouette Score'], row['Adjusted Rand Index (ARI)']]) if not np.isnan(row['Silhouette Score']) and not np.isnan(row['Adjusted Rand Index (ARI)']) else np.nan, axis=1)
 
-        if score == best_score:
-            return ['background-color: yellow'] * len(row)  # Aplicamos color amarillo a las mejores filas
-        return [''] * len(row)
+            # El modelo con el mejor score y menor tiempo
+            best_row = df_subset.loc[df_subset['Score'].idxmax()]
+            best_models.append(best_row)
 
-    styled_df = df.style.apply(highlight, axis=1)
+        best_models_df = pd.DataFrame(best_models)
 
-    return styled_df
+        return best_models_df
 
 # Streamlit code for visualization
 st.sidebar.title("Ayuda")
 st.sidebar.write("""
-Este código realiza un análisis de modelos de **clustering** utilizando diferentes combinaciones de atributos. A continuación, se describen los pasos y funcionalidades principales:
+Este código realiza un análisis de modelos de clustering utilizando diferentes combinaciones de atributos. A continuación, se describen los pasos y funcionalidades principales:
 
 1. **Base de Datos:** Utiliza el conjunto de datos Iris.
-2. **Modelos Utilizados:** KMeans, MeanShift y Hierarchical Clustering.
+2. **Modelos Utilizados:** K-Means, MeanShift, DBSCAN, Clustering Jerárquico y BIRCH.
 3. **Combinaciones por Atributos:** Prueba todas las combinaciones posibles de atributos del conjunto de datos.
-4. **Evaluación:** Utiliza la **Silhouette Score** para medir la calidad de los clusters generados.
+4. **Métricas de Evaluación:** Usa el **Silhouette Score** y el **Adjusted Rand Index** (ARI).
+5. **Tiempo de Ejecución:** Calcula el tiempo que cada modelo tarda en resolver cada combinación de atributos.
 
 Autor: Javier Horacio Pérez Ricárdez
 """)
 
-st.title('Análisis de Modelos de Clustering para Todas las Combinaciones')
+st.title('Análisis de modelos no supervisados para todas las combinaciones')
 
-# Load data (modificar según sea necesario)
+# Cargar datos (modificar según sea necesario)
 input_df = pd.read_csv("iris.csv")
 st.write("### Iris Dataset", input_df)
 
-# Inicializar el análisis de modelos
-analysis = ModelAnalysis(input_df=input_df, target_column='Class', seed=1271673)
+# Inicializar Análisis de Modelos No Supervisados
+analysis = UnsupervisedModelAnalysis(input_df=input_df, seed=1271673)
 results_df = analysis.run_all_combinations()
 
-# Resaltar los mejores modelos y aplicar colores
-styled_df = highlight_best_models(results_df)
+# Selección del mejor modelo por combinación de atributos
+best_models_df = analysis.select_best_model_per_combination(results_df)
 
-# Mostrar los resultados con Streamlit
-st.write("### Resultados del Rendimiento del Modelo", styled_df)
+# Mostrar resultados de los mejores modelos
+st.write("### Los mejores modelos para cada combinación de atributos", best_models_df)
+
+# Mostrar el DataFrame original con todas las combinaciones y métricas
+st.write("### Todas las combinaciones y métricas", results_df)
