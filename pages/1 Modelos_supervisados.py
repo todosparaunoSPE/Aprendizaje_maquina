@@ -33,7 +33,7 @@ background-size:16px 16px;
 </style>
 """
 
-
+st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
 class ModelAnalysis:
