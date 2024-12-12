@@ -12,24 +12,6 @@ from sklearn.cluster import KMeans, MeanShift, DBSCAN, AgglomerativeClustering, 
 from sklearn.metrics import silhouette_score, adjusted_rand_score
 from itertools import combinations
 import time
-import plotly.express as px
-
-
-# Estilo de fondo
-page_bg_img = """
-<style>
-[data-testid="stAppViewContainer"]{
-background:
-radial-gradient(black 15%, transparent 16%) 0 0,
-radial-gradient(black 15%, transparent 16%) 8px 8px,
-radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
-radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
-background-color:#282828;
-background-size:16px 16px;
-</style>
-"""
-
-st.markdown(page_bg_img, unsafe_allow_html=True)
 
 class UnsupervisedModelAnalysis:
     def __init__(self, input_df, model_type=None, seed=None):
@@ -82,7 +64,7 @@ class UnsupervisedModelAnalysis:
 
                     results.append({
                         'Model': model_name,
-                        'Combination': str(comb),  # Almacenar la combinación como una cadena de texto
+                        'Combination': comb,
                         'Silhouette Score': sil_score,
                         'Adjusted Rand Index (ARI)': ari_score,
                         'Time': elapsed_time,
@@ -118,7 +100,6 @@ class UnsupervisedModelAnalysis:
 
         return best_models_df
 
-
 # Streamlit code for visualization
 st.sidebar.title("Ayuda")
 st.sidebar.write("""
@@ -146,24 +127,8 @@ results_df = analysis.run_all_combinations()
 # Selección del mejor modelo por combinación de atributos
 best_models_df = analysis.select_best_model_per_combination(results_df)
 
-# Mostrar los resultados completos
-st.write("### Resultados de rendimiento del modelo (todos los modelos evaluados)", results_df)
-
 # Mostrar resultados de los mejores modelos
 st.write("### Los mejores modelos para cada combinación de atributos", best_models_df)
 
-# Filtrar los datos para el gráfico con solo los mejores modelos
-filtered_df = best_models_df[['Model', 'Silhouette Score', 'Time', 'Combination']]
-
-# Crear gráfico de barras dinámico con Plotly para los mejores modelos
-fig = px.bar(filtered_df, 
-             x='Model', 
-             y=['Silhouette Score', 'Time'], 
-             color='Model',
-             text='Combination',  # Agregar combinación en las etiquetas
-             title="Comparación de Modelos por Silhouette Score y Tiempo",
-             labels={'Silhouette Score': 'Silhouette Score', 'Time': 'Tiempo (segundos)'},
-             height=500)
-
-# Mostrar gráfico
-st.plotly_chart(fig)
+# Mostrar el DataFrame original con todas las combinaciones y métricas
+st.write("### Todas las combinaciones y métricas", results_df)
