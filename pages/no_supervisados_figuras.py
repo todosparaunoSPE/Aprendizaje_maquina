@@ -146,6 +146,9 @@ results_df = analysis.run_all_combinations()
 # Selección del mejor modelo por combinación de atributos
 best_models_df = analysis.select_best_model_per_combination(results_df)
 
+# Mostrar los resultados completos
+st.write("### Resultados de rendimiento del modelo (todos los modelos evaluados)", results_df)
+
 # Mostrar resultados de los mejores modelos
 st.write("### Los mejores modelos para cada combinación de atributos", best_models_df)
 
