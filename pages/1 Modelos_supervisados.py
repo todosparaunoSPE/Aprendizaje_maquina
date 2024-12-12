@@ -159,7 +159,8 @@ fig.add_trace(go.Bar(
     name='Accuracy',
     marker_color='skyblue',
     text=top_4_models['Combination'].apply(lambda x: f'Combinación: {x}'),
-    hovertemplate='<b>Modelo:</b> %{x}<br><b>Accuracy:</b> %{y:.2f}<br><b>Combinación:</b> %{text}<extra></extra>'
+    hovertemplate='<b>Modelo:</b> %{x}<br><b>Accuracy:</b> %{y:.2f}<br><b>Combinación:</b> %{text}<extra></extra>',
+    width=0.3  # Establecer el ancho de las barras
 ))
 
 # Añadir barras para Time
@@ -170,7 +171,8 @@ fig.add_trace(go.Bar(
     marker_color='red',
     text=top_4_models['Combination'].apply(lambda x: f'Combinación: {x}'),
     hovertemplate='<b>Modelo:</b> %{x}<br><b>Tiempo:</b> %{y:.2f} segundos<br><b>Combinación:</b> %{text}<extra></extra>',
-    yaxis="y2"
+    yaxis="y2",
+    width=0.3  # Establecer el ancho de las barras
 ))
 
 # Configuración de ejes y diseño
@@ -180,10 +182,9 @@ fig.update_layout(
     xaxis=dict(title='Modelo'),
     yaxis=dict(title='Accuracy', side='left'),
     yaxis2=dict(title='Tiempo (segundos)', side='right', overlaying='y'),
-    hovermode='closest'
+    hovermode='closest',
+    bargap=0.1  # Reducir el espacio entre las barras para hacer las barras más estrechas
 )
 
 # Mostrar gráfico interactivo
 st.plotly_chart(fig)
-
-
