@@ -5,19 +5,18 @@ Created on Tue Dec 10 14:49:06 2024
 @author: jperezr
 """
 
-
 import pandas as pd
 import numpy as np
 import streamlit as st
+import plotly.graph_objects as go
+from itertools import combinations
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-from itertools import combinations
+from sklearn.metrics import accuracy_score, classification_report
 import time
-
 
 # Estilo de fondo
 page_bg_img = """
@@ -72,29 +71,17 @@ class ModelAnalysis:
                     elapsed_time = time.time() - start_time
 
                     accuracy = accuracy_score(y_test, predictions)
-                    conf_matrix = confusion_matrix(y_test, predictions)
-
-                    if conf_matrix.shape == (2, 2):
-                        tn, fp, fn, tp = conf_matrix.ravel()
-                    else:
-                        tn, fp, fn, tp = [np.nan]*4
-
                     report = classification_report(y_test, predictions, output_dict=True)
 
                     results.append({
                         'Model': model_name,
                         'Combination': comb,
                         'Accuracy': accuracy,
-                        'True Positive (TP)': tp,
-                        'False Positive (FP)': fp,
-                        'True Negative (TN)': tn,
-                        'False Negative (FN)': fn,
+                        'Time': elapsed_time,
                         'Precision': report['weighted avg']['precision'],
                         'Recall': report['weighted avg']['recall'],
                         'F1-Score': report['weighted avg']['f1-score'],
-                        'Time': elapsed_time,
-                        'Confusion Matrix': f"[{conf_matrix.tolist()}]"  # Encerrar la matriz de confusión entre corchetes
-                   })
+                    })
 
         results_df = pd.DataFrame(results)
 
@@ -112,7 +99,7 @@ class ModelAnalysis:
         # Filtrar por número de atributos (1, 2, 3, 4)
         for num_attributes in [1, 2, 3, 4]:
             subset = results_df[results_df['Combination'].apply(lambda x: len(x) == num_attributes)]
-            best_model_row = subset.loc[subset['Score'].idxmax()]  # Obtener el mejor modelo basado en la puntuación
+            best_model_row = subset.loc[subset['Accuracy'].idxmax()]  # Obtener el mejor modelo basado en la precisión
             best_models[num_attributes] = best_model_row
 
         best_models_df = pd.DataFrame.from_dict(best_models, orient='index')
@@ -120,13 +107,8 @@ class ModelAnalysis:
 
 
 def highlight_best_models(df):
-    def calculate_score(row):
-        metrics = [row['Accuracy'], row['Precision'], row['Recall'], row['F1-Score']]
-        return np.mean(metrics)
+    return df.sort_values(by='Accuracy', ascending=False)
 
-    df['Score'] = df.apply(calculate_score, axis=1)
-
-    return df
 
 # Streamlit code for visualization
 st.sidebar.title("Ayuda")
@@ -163,3 +145,45 @@ best_models_df = analysis.best_models_by_num_attributes(results_df)
 
 # Display the best models by attributes
 st.write("### Mejores modelos por número de atributos", best_models_df)
+
+# Obtener los 4 mejores modelos por precisión
+top_4_models = best_models_df[['Model', 'Combination', 'Accuracy', 'Time']].head(4)
+
+# Crear gráfico interactivo con Plotly
+fig = go.Figure()
+
+# Añadir barras para Accuracy
+fig.add_trace(go.Bar(
+    x=top_4_models['Model'],
+    y=top_4_models['Accuracy'],
+    name='Accuracy',
+    marker_color='skyblue',
+    text=top_4_models['Combination'].apply(lambda x: f'Combinación: {x}'),
+    hovertemplate='<b>Modelo:</b> %{x}<br><b>Accuracy:</b> %{y:.2f}<br><b>Combinación:</b> %{text}<extra></extra>'
+))
+
+# Añadir barras para Time
+fig.add_trace(go.Bar(
+    x=top_4_models['Model'],
+    y=top_4_models['Time'],
+    name='Time',
+    marker_color='red',
+    text=top_4_models['Combination'].apply(lambda x: f'Combinación: {x}'),
+    hovertemplate='<b>Modelo:</b> %{x}<br><b>Tiempo:</b> %{y:.2f} segundos<br><b>Combinación:</b> %{text}<extra></extra>',
+    yaxis="y2"
+))
+
+# Configuración de ejes y diseño
+fig.update_layout(
+    title='Mejores Modelos: Accuracy y Tiempo',
+    barmode='group',
+    xaxis=dict(title='Modelo'),
+    yaxis=dict(title='Accuracy', side='left'),
+    yaxis2=dict(title='Tiempo (segundos)', side='right', overlaying='y'),
+    hovermode='closest'
+)
+
+# Mostrar gráfico interactivo
+st.plotly_chart(fig)
+
+
